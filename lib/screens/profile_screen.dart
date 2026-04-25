@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -13,6 +12,7 @@ import 'account_info_screen.dart';
 import 'biometric_screen.dart';
 import 'currency_screen.dart';
 import 'data_export_screen.dart';
+import 'edit_budget_screen.dart';
 import 'login_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -97,20 +97,27 @@ class _ProfileView extends StatelessWidget {
                           fontWeight: FontWeight.w700)),
                 ),
                 const SizedBox(width: 16),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(name,
-                        style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.textPrimary)),
-                    const SizedBox(height: 2),
-                    Text(email,
-                        style: const TextStyle(
-                            fontSize: 13, color: AppColors.textSecondary)),
-                  ],
-                ),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(name,
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
+                          style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.textPrimary)),
+                      const SizedBox(height: 2),
+                      Text(email,
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
+                          style: const TextStyle(
+                              fontSize: 13,
+                              color: AppColors.textSecondary)),
+                    ],
+                  ),
+                )
               ],
             ),
           ),
@@ -119,16 +126,21 @@ class _ProfileView extends StatelessWidget {
             label: 'Account Balance',
             color: AppColors.primaryLight,
             textColor: AppColors.primaryDark,
-            onTap: () => Navigator.push(context,
+            onTap: () async {
+              await Navigator.push(
+                context,
                 MaterialPageRoute(
-                    builder: (_) => AccountInfoScreen(token: token))),
+                    builder: (_) => EditBudgetScreen(token: token)),
+              );
+            },
           ),
           const SizedBox(height: 24),
           _MenuSection(children: [
             _MenuItem(
               icon: Icons.person_outline,
               label: 'Account Info',
-              onTap: () => Navigator.push(context,
+              onTap: () => Navigator.push(
+                  context,
                   MaterialPageRoute(
                       builder: (_) => AccountInfoScreen(token: token))),
             ),
@@ -147,16 +159,18 @@ class _ProfileView extends StatelessWidget {
             _MenuItem(
               icon: Icons.category_outlined,
               label: 'Manage Categories',
-              onTap: () => Navigator.push(context,
+              onTap: () => Navigator.push(
+                  context,
                   MaterialPageRoute(
                       builder: (_) => CategoriesScreen(token: token))),
             ),
             _MenuItem(
-              icon: Icons.add_circle_outline,
-              label: 'Add Income',
-              onTap: () => Navigator.push(context,
+              icon: Icons.account_balance_wallet_outlined,
+              label: 'Manage Income',
+              onTap: () => Navigator.push(
+                  context,
                   MaterialPageRoute(
-                      builder: (_) => AddIncomeScreen(token: token))),
+                      builder: (_) => IncomeScreen(token: token))),
             ),
           ]),
           const SizedBox(height: 12),
@@ -188,7 +202,8 @@ class _ProfileView extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text('Linked Devices',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+                style:
+                TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
             const SizedBox(height: 20),
             _DeviceTile(
               icon: Icons.phone_android,
@@ -227,8 +242,8 @@ class _ProfileView extends StatelessWidget {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        shape:
-        RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16)),
         title: const Text('Log Out',
             style: TextStyle(fontWeight: FontWeight.w600)),
         content: const Text('Are you sure you want to log out?'),
@@ -244,13 +259,12 @@ class _ProfileView extends StatelessWidget {
             ),
             onPressed: () async {
               final prefs = await SharedPreferences.getInstance();
-
               await prefs.setBool('logged_out', true);
-
               if (context.mounted) {
                 Navigator.pushAndRemoveUntil(
                   context,
-                  MaterialPageRoute(builder: (_) => const LoginScreen()),
+                  MaterialPageRoute(
+                      builder: (_) => const LoginScreen()),
                       (_) => false,
                 );
               }
@@ -266,12 +280,8 @@ class _ProfileView extends StatelessWidget {
 
 class _SettingsView extends StatelessWidget {
   final String token;
-  final bool emailNotif;
-  final bool inAppNotif;
-  final bool budgetAlerts;
-  final ValueChanged<bool> onEmailToggle;
-  final ValueChanged<bool> onInAppToggle;
-  final ValueChanged<bool> onBudgetToggle;
+  final bool emailNotif, inAppNotif, budgetAlerts;
+  final ValueChanged<bool> onEmailToggle, onInAppToggle, onBudgetToggle;
 
   const _SettingsView({
     required this.token,
@@ -312,7 +322,6 @@ class _SettingsView extends StatelessWidget {
                 onChanged: onBudgetToggle),
           ]),
           const SizedBox(height: 16),
-
           _SettingSectionTitle(title: 'General'),
           _MenuSection(children: [
             _MenuItem(
@@ -326,10 +335,11 @@ class _SettingsView extends StatelessWidget {
                       color: AppColors.textSecondary, fontSize: 13),
                 ),
               ),
-              onTap: () => Navigator.push(context,
-                  MaterialPageRoute(builder: (_) => const CurrencyScreen())),
+              onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => const CurrencyScreen())),
             ),
-
             _MenuItem(
               icon: Icons.language_outlined,
               label: 'Language',
@@ -338,17 +348,18 @@ class _SettingsView extends StatelessWidget {
                 style: const TextStyle(
                     color: AppColors.textSecondary, fontSize: 13),
               ),
-              onTap: () => _showLanguageDialog(context, localeProvider),
+              onTap: () =>
+                  _showLanguageDialog(context, localeProvider),
             ),
-
             _MenuItem(
               icon: Icons.repeat_outlined,
               label: 'Recurring Expenses',
-              onTap: () => Navigator.push(context,
+              onTap: () => Navigator.push(
+                  context,
                   MaterialPageRoute(
-                      builder: (_) => const RecurringExpensesScreen())),
+                      builder: (_) =>
+                      const RecurringExpensesScreen())),
             ),
-
             _MenuItem(
               icon: Icons.download_outlined,
               label: 'Data Export',
@@ -360,27 +371,32 @@ class _SettingsView extends StatelessWidget {
                   _ExportChip(label: 'JSON'),
                 ],
               ),
-              onTap: () => Navigator.push(context,
+              onTap: () => Navigator.push(
+                  context,
                   MaterialPageRoute(
-                      builder: (_) => DataExportScreen(token: token))),
+                      builder: (_) =>
+                          DataExportScreen(token: token))),
             ),
           ]),
           const SizedBox(height: 16),
-
           _SettingSectionTitle(title: 'Security'),
           _MenuSection(children: [
             _MenuItem(
               icon: Icons.lock_outline,
               label: 'Change Password',
-              onTap: () => Navigator.push(context,
+              onTap: () => Navigator.push(
+                  context,
                   MaterialPageRoute(
-                      builder: (_) => ChangePasswordScreen(token: token))),
+                      builder: (_) =>
+                          ChangePasswordScreen(token: token))),
             ),
             _MenuItem(
               icon: Icons.fingerprint_outlined,
               label: 'Biometric',
-              onTap: () => Navigator.push(context,
-                  MaterialPageRoute(builder: (_) => const BiometricScreen())),
+              onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => const BiometricScreen())),
             ),
           ]),
           const SizedBox(height: 32),
@@ -394,12 +410,13 @@ class _SettingsView extends StatelessWidget {
     return prefs.getString('currency') ?? 'EGP';
   }
 
-  void _showLanguageDialog(BuildContext context, LocaleProvider provider) {
+  void _showLanguageDialog(
+      BuildContext context, LocaleProvider provider) {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        shape:
-        RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16)),
         title: const Text('Select Language',
             style: TextStyle(fontWeight: FontWeight.w600)),
         content: Column(
@@ -476,8 +493,8 @@ class RecurringExpensesScreen extends StatelessWidget {
               const Text(
                 'Set up automatic reminders for your regular expenses like rent, subscriptions, and utilities.',
                 textAlign: TextAlign.center,
-                style:
-                TextStyle(fontSize: 14, color: AppColors.textSecondary),
+                style: TextStyle(
+                    fontSize: 14, color: AppColors.textSecondary),
               ),
               const SizedBox(height: 24),
               Container(
@@ -511,8 +528,7 @@ class RecurringExpensesScreen extends StatelessWidget {
 
 class _DeviceTile extends StatelessWidget {
   final IconData icon;
-  final String name;
-  final String detail;
+  final String name, detail;
   final bool isActive;
   const _DeviceTile(
       {required this.icon,
@@ -532,18 +548,19 @@ class _DeviceTile extends StatelessWidget {
           borderRadius: BorderRadius.circular(10),
         ),
         child: Icon(icon,
-            color: isActive ? AppColors.success : AppColors.textHint),
+            color:
+            isActive ? AppColors.success : AppColors.textHint),
       ),
       title: Text(name,
           style: const TextStyle(
               fontSize: 14, fontWeight: FontWeight.w600)),
       subtitle: Text(detail,
-          style:
-          const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+          style: const TextStyle(
+              fontSize: 12, color: AppColors.textSecondary)),
       trailing: isActive
           ? Container(
-        padding:
-        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        padding: const EdgeInsets.symmetric(
+            horizontal: 8, vertical: 3),
         decoration: BoxDecoration(
           color: AppColors.success.withOpacity(0.1),
           borderRadius: BorderRadius.circular(8),
@@ -589,7 +606,8 @@ class _MenuSection extends StatelessWidget {
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8)
+          BoxShadow(
+              color: Colors.black.withOpacity(0.04), blurRadius: 8)
         ],
       ),
       child: Column(
@@ -600,7 +618,9 @@ class _MenuSection extends StatelessWidget {
           e.value,
           if (e.key < children.length - 1)
             const Divider(
-                height: 1, indent: 56, color: AppColors.divider),
+                height: 1,
+                indent: 56,
+                color: AppColors.divider),
         ]))
             .toList(),
       ),
@@ -612,8 +632,7 @@ class _MenuItem extends StatelessWidget {
   final IconData icon;
   final String label;
   final VoidCallback onTap;
-  final Color? iconColor;
-  final Color? textColor;
+  final Color? iconColor, textColor;
   final bool showArrow;
   final Widget? trailing;
 
@@ -638,7 +657,8 @@ class _MenuItem extends StatelessWidget {
           color: (iconColor ?? AppColors.primary).withOpacity(0.1),
           borderRadius: BorderRadius.circular(8),
         ),
-        child: Icon(icon, size: 18, color: iconColor ?? AppColors.primary),
+        child: Icon(icon,
+            size: 18, color: iconColor ?? AppColors.primary),
       ),
       title: Text(label,
           style: TextStyle(
@@ -647,7 +667,8 @@ class _MenuItem extends StatelessWidget {
               color: textColor ?? AppColors.textPrimary)),
       trailing: trailing ??
           (showArrow
-              ? const Icon(Icons.chevron_right, color: AppColors.textHint)
+              ? const Icon(Icons.chevron_right,
+              color: AppColors.textHint)
               : null),
     );
   }
@@ -684,7 +705,9 @@ class _SwitchMenuItem extends StatelessWidget {
               fontWeight: FontWeight.w500,
               color: AppColors.textPrimary)),
       trailing: Switch(
-          value: value, onChanged: onChanged, activeColor: AppColors.primary),
+          value: value,
+          onChanged: onChanged,
+          activeColor: AppColors.primary),
     );
   }
 }
@@ -696,7 +719,8 @@ class _ExportChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+      padding:
+      const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
       decoration: BoxDecoration(
         color: AppColors.primaryLight,
         borderRadius: BorderRadius.circular(6),

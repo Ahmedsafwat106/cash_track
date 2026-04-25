@@ -1,4 +1,3 @@
-
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../core/api_service.dart';
 import 'auth_state.dart';
@@ -11,15 +10,15 @@ class AuthCubit extends Cubit<AuthState> {
     emit(AuthLoading());
     try {
       final res = await _api.login(email, password);
-      if (res['success'] == true) {
-        final token = res['data'] as String?;
+      if (res['success'] == true && res['data'] != null) {
+        final token = res['data'].toString();
         emit(AuthSuccess(token: token));
       } else {
         final err = res['error'] ?? res['message'] ?? 'Login Failed';
         if (err.toString().contains('Confirm')) {
           emit(AuthEmailNotConfirmed());
-        } else {
-          emit(AuthFailure(err.toString()));
+        }else {
+          emit(AuthFailure('Token is null'));
         }
       }
     } catch (e) {

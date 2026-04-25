@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
@@ -83,12 +82,8 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
   Future<void> _pickReceipt() async {
     final picker = ImagePicker();
     final xfile = await picker.pickImage(
-      source: ImageSource.gallery,
-      imageQuality: 80,
-    );
-    if (xfile != null) {
-      setState(() => _receiptPath = xfile.path);
-    }
+        source: ImageSource.gallery, imageQuality: 80);
+    if (xfile != null) setState(() => _receiptPath = xfile.path);
   }
 
   void _submit(BuildContext ctx) {
@@ -96,9 +91,8 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
     if (_selectedCategory == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Please select a category'),
-          backgroundColor: AppColors.error,
-        ),
+            content: Text('Please select a category'),
+            backgroundColor: AppColors.error),
       );
       return;
     }
@@ -117,17 +111,9 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
     if (_receiptPath == null) return;
     setState(() => _uploadingReceipt = true);
     try {
-      final res = await ApiService().uploadReceipt(
-        widget.token,
-        expenseId,
-        _receiptPath!,
-      );
-      print('=== UPLOAD RECEIPT RESPONSE: $res ===');
-      if (res['success'] != true) {
-        print('=== UPLOAD FAILED: ${res['error']} ===');
-      }
+      await ApiService().uploadReceipt(widget.token, expenseId, _receiptPath!);
     } catch (e) {
-      print('=== UPLOAD EXCEPTION: $e ===');
+      print('Upload error: $e');
     } finally {
       setState(() => _uploadingReceipt = false);
     }
@@ -143,21 +129,16 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
       child: BlocListener<TransactionsCubit, TransactionsState>(
         listener: (ctx, state) async {
           if (state is TransactionAdded) {
-
             final expenseId = state.expenseId;
-
             if (_receiptPath != null && expenseId != null && expenseId > 0) {
               await _uploadReceiptIfSelected(expenseId);
             }
-
             Navigator.pop(context);
             widget.onAdded?.call();
-
             Color snackColor = AppColors.success;
             String msg = state.message;
             if (state.status == 2) snackColor = AppColors.error;
             if (state.status == 1) snackColor = AppColors.warning;
-
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(content: Text(msg), backgroundColor: snackColor),
             );
@@ -182,17 +163,13 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Handle
                   Container(
                     margin: const EdgeInsets.only(top: 12),
-                    width: 40,
-                    height: 4,
+                    width: 40, height: 4,
                     decoration: BoxDecoration(
-                      color: AppColors.divider,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
+                        color: AppColors.divider,
+                        borderRadius: BorderRadius.circular(2)),
                   ),
-                  // Header
                   Padding(
                     padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
                     child: Row(
@@ -203,7 +180,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                           onPressed: () => Navigator.pop(context),
                         ),
                         Text(
-                          isLoading && _uploadingReceipt
+                          _uploadingReceipt
                               ? 'Uploading receipt...'
                               : 'Add Expense',
                           style: const TextStyle(
@@ -213,16 +190,13 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                         ),
                         TextButton(
                           onPressed: isLoading ? null : () => _submit(ctx),
-                          child: Text(
-                            'Save',
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w700,
-                              color: isLoading
-                                  ? AppColors.textHint
-                                  : AppColors.primary,
-                            ),
-                          ),
+                          child: Text('Save',
+                              style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w700,
+                                  color: isLoading
+                                      ? AppColors.textHint
+                                      : AppColors.primary)),
                         ),
                       ],
                     ),
@@ -236,8 +210,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const SizedBox(height: 8),
-
-                            // ── Amount ──────────────────────────
+                            // Amount
                             const Text('Expense',
                                 style: TextStyle(
                                     fontSize: 13,
@@ -248,47 +221,43 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 16, vertical: 12),
                               decoration: BoxDecoration(
-                                color: AppColors.surface,
-                                borderRadius: BorderRadius.circular(12),
-                                border:
-                                Border.all(color: AppColors.divider),
-                              ),
-                              child: Row(
-                                children: [
-                                  const Text('EGP ',
-                                      style: TextStyle(
-                                          fontSize: 22,
-                                          fontWeight: FontWeight.w700,
-                                          color: AppColors.textPrimary)),
-                                  Expanded(
-                                    child: TextFormField(
-                                      controller: _amountCtrl,
-                                      keyboardType:
-                                      const TextInputType.numberWithOptions(
-                                          decimal: true),
-                                      style: const TextStyle(
-                                          fontSize: 22,
-                                          fontWeight: FontWeight.w700,
-                                          color: AppColors.textPrimary),
-                                      decoration: const InputDecoration(
+                                  color: AppColors.surface,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                      color: AppColors.divider)),
+                              child: Row(children: [
+                                const Text('EGP ',
+                                    style: TextStyle(
+                                        fontSize: 22,
+                                        fontWeight: FontWeight.w700,
+                                        color: AppColors.textPrimary)),
+                                Expanded(
+                                  child: TextFormField(
+                                    controller: _amountCtrl,
+                                    keyboardType:
+                                    const TextInputType.numberWithOptions(
+                                        decimal: true),
+                                    style: const TextStyle(
+                                        fontSize: 22,
+                                        fontWeight: FontWeight.w700,
+                                        color: AppColors.textPrimary),
+                                    decoration: const InputDecoration(
                                         border: InputBorder.none,
                                         hintText: '0.00',
-                                        contentPadding: EdgeInsets.zero,
-                                      ),
-                                      validator: (v) {
-                                        if (v!.isEmpty) return 'Enter amount';
-                                        if (double.tryParse(v) == null) {
-                                          return 'Invalid amount';
-                                        }
-                                        return null;
-                                      },
-                                    ),
+                                        contentPadding: EdgeInsets.zero),
+                                    validator: (v) {
+                                      if (v!.isEmpty) return 'Enter amount';
+                                      if (double.tryParse(v) == null) {
+                                        return 'Invalid amount';
+                                      }
+                                      return null;
+                                    },
                                   ),
-                                ],
-                              ),
+                                ),
+                              ]),
                             ),
                             const SizedBox(height: 16),
-
+                            // Description
                             const Text('Description',
                                 style: TextStyle(
                                     fontSize: 13,
@@ -302,7 +271,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                               v!.isEmpty ? 'Enter a description' : null,
                             ),
                             const SizedBox(height: 16),
-
+                            // Date
                             const Text('Date',
                                 style: TextStyle(
                                     fontSize: 13,
@@ -320,7 +289,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                                   color: AppColors.textHint),
                             ),
                             const SizedBox(height: 16),
-
+                            // Category
                             const Text('Category',
                                 style: TextStyle(
                                     fontSize: 13,
@@ -336,12 +305,10 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                                 }
                                 return Container(
                                   decoration: BoxDecoration(
-                                    color: AppColors.surface,
-                                    borderRadius:
-                                    BorderRadius.circular(12),
-                                    border: Border.all(
-                                        color: AppColors.divider),
-                                  ),
+                                      color: AppColors.surface,
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(
+                                          color: AppColors.divider)),
                                   child: DropdownButtonFormField<String>(
                                     value: _selectedCategory,
                                     hint: const Text('Select Category',
@@ -351,16 +318,12 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                                     items: _categories
                                         .map((c) => DropdownMenuItem(
                                       value: c,
-                                      child: Row(
-                                        children: [
-                                          CategoryIcon(
-                                              category: c,
-                                              size: 22),
-                                          const SizedBox(
-                                              width: 8),
-                                          Text(c),
-                                        ],
-                                      ),
+                                      child: Row(children: [
+                                        CategoryIcon(
+                                            category: c, size: 22),
+                                        const SizedBox(width: 8),
+                                        Text(c),
+                                      ]),
                                     ))
                                         .toList(),
                                     onChanged: (v) => setState(
@@ -369,34 +332,72 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                                         ? 'Select a category'
                                         : null,
                                     decoration: const InputDecoration(
-                                      border: InputBorder.none,
-                                      contentPadding:
-                                      EdgeInsets.symmetric(
-                                          horizontal: 16,
-                                          vertical: 4),
-                                    ),
+                                        border: InputBorder.none,
+                                        contentPadding: EdgeInsets.symmetric(
+                                            horizontal: 16, vertical: 4)),
                                     dropdownColor: AppColors.surface,
-                                    borderRadius:
-                                    BorderRadius.circular(12),
+                                    borderRadius: BorderRadius.circular(12),
                                   ),
                                 );
                               },
                             ),
                             const SizedBox(height: 16),
-
+                            // Payment Method
                             const Text('Payment Method',
                                 style: TextStyle(
                                     fontSize: 13,
                                     color: AppColors.textSecondary,
                                     fontWeight: FontWeight.w500)),
                             const SizedBox(height: 8),
-                            _PaymentMethodPicker(
-                              selected: _paymentMethod,
-                              onChanged: (v) =>
-                                  setState(() => _paymentMethod = v),
+                            Container(
+                              decoration: BoxDecoration(
+                                  color: AppColors.surface,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                      color: AppColors.divider)),
+                              child: DropdownButtonFormField<int>(
+                                value: _paymentMethod,
+                                items: const [
+                                  DropdownMenuItem(
+                                      value: 1,
+                                      child: Row(children: [
+                                        Icon(Icons.money,
+                                            size: 18,
+                                            color: AppColors.textSecondary),
+                                        SizedBox(width: 8),
+                                        Text('Cash'),
+                                      ])),
+                                  DropdownMenuItem(
+                                      value: 2,
+                                      child: Row(children: [
+                                        Icon(Icons.credit_card,
+                                            size: 18,
+                                            color: AppColors.textSecondary),
+                                        SizedBox(width: 8),
+                                        Text('Card'),
+                                      ])),
+                                  DropdownMenuItem(
+                                      value: 3,
+                                      child: Row(children: [
+                                        Icon(Icons.phone_android,
+                                            size: 18,
+                                            color: AppColors.textSecondary),
+                                        SizedBox(width: 8),
+                                        Text('Online'),
+                                      ])),
+                                ],
+                                onChanged: (v) =>
+                                    setState(() => _paymentMethod = v!),
+                                decoration: const InputDecoration(
+                                    border: InputBorder.none,
+                                    contentPadding: EdgeInsets.symmetric(
+                                        horizontal: 16, vertical: 4)),
+                                dropdownColor: AppColors.surface,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
                             ),
                             const SizedBox(height: 16),
-
+                            // Notes
                             const Text('Notes (optional)',
                                 style: TextStyle(
                                     fontSize: 13,
@@ -409,7 +410,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                               maxLines: 3,
                             ),
                             const SizedBox(height: 16),
-
+                            // Receipt
                             const Text('Receipt (optional)',
                                 style: TextStyle(
                                     fontSize: 13,
@@ -424,17 +425,15 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                                   color: _receiptPath != null
                                       ? AppColors.success.withOpacity(0.08)
                                       : AppColors.surface,
-                                  borderRadius:
-                                  BorderRadius.circular(12),
+                                  borderRadius: BorderRadius.circular(12),
                                   border: Border.all(
-                                    color: _receiptPath != null
-                                        ? AppColors.success
-                                        : AppColors.divider,
-                                  ),
+                                      color: _receiptPath != null
+                                          ? AppColors.success
+                                          : AppColors.divider),
                                 ),
+
                                 child: Row(
-                                  mainAxisAlignment:
-                                  MainAxisAlignment.center,
+                                  mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
                                     Icon(
                                       _receiptPath != null
@@ -443,35 +442,37 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                                       color: _receiptPath != null
                                           ? AppColors.success
                                           : AppColors.textHint,
+                                      size: 20,
                                     ),
                                     const SizedBox(width: 8),
-                                    Text(
-                                      _receiptPath != null
-                                          ? 'Receipt selected ✓ (will upload after save)'
-                                          : 'Upload Image/PDF',
-                                      style: TextStyle(
-                                        color: _receiptPath != null
-                                            ? AppColors.success
-                                            : AppColors.textHint,
-                                        fontSize: 13,
-                                        fontWeight: _receiptPath != null
-                                            ? FontWeight.w500
-                                            : FontWeight.w400,
+                                    Flexible(
+                                      child: Text(
+                                        _receiptPath != null
+                                            ? 'Receipt selected ✓'
+                                            : 'Upload Image/PDF',
+                                        style: TextStyle(
+                                          color: _receiptPath != null
+                                              ? AppColors.success
+                                              : AppColors.textHint,
+                                          fontSize: 13,
+                                          fontWeight: _receiptPath != null
+                                              ? FontWeight.w500
+                                              : FontWeight.w400,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
                                       ),
                                     ),
                                   ],
                                 ),
                               ),
                             ),
-
                             if (_receiptPath != null) ...[
                               const SizedBox(height: 8),
                               GestureDetector(
                                 onTap: () =>
                                     setState(() => _receiptPath = null),
                                 child: const Row(
-                                  mainAxisAlignment:
-                                  MainAxisAlignment.center,
+                                  mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
                                     Icon(Icons.close,
                                         size: 14,
@@ -485,9 +486,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                                 ),
                               ),
                             ],
-
                             const SizedBox(height: 32),
-
                             CustomButton(
                               label: _uploadingReceipt
                                   ? 'Uploading receipt...'
@@ -505,55 +504,6 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
             );
           },
         ),
-      ),
-    );
-  }
-}
-
-class _PaymentMethodPicker extends StatelessWidget {
-  final int selected;
-  final ValueChanged<int> onChanged;
-
-  const _PaymentMethodPicker(
-      {required this.selected, required this.onChanged});
-
-  @override
-  Widget build(BuildContext context) {
-    final methods = [
-      {'label': 'Cash', 'value': 1, 'icon': Icons.money},
-      {'label': 'Card', 'value': 2, 'icon': Icons.credit_card},
-      {'label': 'Online', 'value': 3, 'icon': Icons.phone_android},
-    ];
-
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.divider),
-      ),
-      child: DropdownButtonFormField<int>(
-        value: selected,
-        items: methods
-            .map((m) => DropdownMenuItem<int>(
-          value: m['value'] as int,
-          child: Row(
-            children: [
-              Icon(m['icon'] as IconData,
-                  size: 18, color: AppColors.textSecondary),
-              const SizedBox(width: 8),
-              Text(m['label'] as String),
-            ],
-          ),
-        ))
-            .toList(),
-        onChanged: (v) => onChanged(v!),
-        decoration: const InputDecoration(
-          border: InputBorder.none,
-          contentPadding:
-          EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-        ),
-        dropdownColor: AppColors.surface,
-        borderRadius: BorderRadius.circular(12),
       ),
     );
   }

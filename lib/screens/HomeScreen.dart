@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
@@ -16,7 +17,7 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   final _api = ApiService();
   bool _loading = true;
   List<dynamic> _transactions = [];
@@ -29,17 +30,39 @@ class _HomeScreenState extends State<HomeScreen> {
   List<Map<String, dynamic>> _barData = [];
   final Map<String, double> _categoryTotals = {};
 
+  Timer? _refreshTimer;
+
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadData();
+    _refreshTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (mounted) _loadData(silent: true);
+    });
   }
 
-  Future<void> _loadData() async {
-    setState(() {
-      _loading = true;
-      _errorMsg = '';
-    });
+  @override
+  void dispose() {
+    _refreshTimer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && mounted) {
+      _loadData(silent: true);
+    }
+  }
+
+  Future<void> _loadData({bool silent = false}) async {
+    if (!silent) {
+      setState(() {
+        _loading = true;
+        _errorMsg = '';
+      });
+    }
     try {
       final results = await Future.wait([
         _api.getUserCurrentData(widget.token),
@@ -49,9 +72,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
       final reportData = results[0]['data'] as Map<String, dynamic>?;
       if (reportData != null) {
-        _totalBalance   = (reportData['totalBalance'] as num?)?.toDouble() ?? 0;
-        _totalExpenses  = (reportData['totalExpenses'] as num?)?.toDouble() ?? 0;
-        _remainingBudget = (reportData['remainigBudget'] as num?)?.toDouble() ?? 0;
+        _totalBalance =
+            (reportData['totalBalance'] as num?)?.toDouble() ?? 0;
+        _totalExpenses =
+            (reportData['totalExpenses'] as num?)?.toDouble() ?? 0;
+        _remainingBudget =
+            (reportData['remainigBudget'] as num?)?.toDouble() ?? 0;
       }
 
       final list = (results[1]['data'] as List?) ?? [];
@@ -70,9 +96,11 @@ class _HomeScreenState extends State<HomeScreen> {
           .reversed
           .toList();
     } catch (e) {
-      _errorMsg = e.toString().replaceFirst('Exception: ', '');
+      if (!silent) {
+        _errorMsg = e.toString().replaceFirst('Exception: ', '');
+      }
     }
-    setState(() => _loading = false);
+    if (mounted) setState(() => _loading = false);
   }
 
   @override
@@ -111,7 +139,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-
                     _BalanceCard(
                       totalBalance: _totalBalance,
                       totalExpenses: _totalExpenses,
@@ -119,7 +146,6 @@ class _HomeScreenState extends State<HomeScreen> {
                       usedPercent: usedPercent,
                     ),
                     const SizedBox(height: 24),
-
                     _MonthlySummaryCard(barData: _barData),
                     const SizedBox(height: 24),
 
@@ -132,19 +158,15 @@ class _HomeScreenState extends State<HomeScreen> {
                           total: _totalExpenses),
                       const SizedBox(height: 24),
                     ],
-
-                    SectionHeader(
-                      title: 'Recent Transactions',
-                      action: 'See all',
-                      onAction: () {},
-                    ),
-                    const SizedBox(height: 12),
-
                     if (_errorMsg.isNotEmpty)
                       _ErrorWidget(msg: _errorMsg)
-                    else if (_transactions.isEmpty)
-                      _EmptyWidget()
-                    else
+                    else if (_transactions.isNotEmpty) ...[
+                      SectionHeader(
+                        title: 'Recent Transactions',
+                        action: 'See all',
+                        onAction: () {},
+                      ),
+                      const SizedBox(height: 12),
                       ..._transactions.map((t) => _TransactionTile(
                         transaction: t,
                         onTap: () => Navigator.push(
@@ -156,14 +178,15 @@ class _HomeScreenState extends State<HomeScreen> {
                               t['expenseId'] as int? ?? 0,
                               categoryName:
                               t['categoryName'] ?? '',
-                              amount: (t['amount'] as num?)
-                                  ?.toDouble() ??
+                              amount:
+                              (t['amount'] as num?)?.toDouble() ??
                                   0,
                               date: t['date']?.toString() ?? '',
                             ),
                           ),
                         ).then((_) => _loadData()),
                       )),
+                    ],
                     const SizedBox(height: 32),
                   ],
                 ),
@@ -179,8 +202,10 @@ class _HomeScreenState extends State<HomeScreen> {
 class _BalanceCard extends StatelessWidget {
   final double totalBalance, totalExpenses, remaining, usedPercent;
   const _BalanceCard(
-      {required this.totalBalance, required this.totalExpenses,
-        required this.remaining, required this.usedPercent});
+      {required this.totalBalance,
+        required this.totalExpenses,
+        required this.remaining,
+        required this.usedPercent});
 
   @override
   Widget build(BuildContext context) {
@@ -194,8 +219,10 @@ class _BalanceCard extends StatelessWidget {
             end: Alignment.bottomRight),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
-          BoxShadow(color: AppColors.primary.withOpacity(0.35),
-              blurRadius: 20, offset: const Offset(0, 8))
+          BoxShadow(
+              color: AppColors.primary.withOpacity(0.35),
+              blurRadius: 20,
+              offset: const Offset(0, 8))
         ],
       ),
       child: Column(
@@ -204,18 +231,27 @@ class _BalanceCard extends StatelessWidget {
           const Text('Total Balance',
               style: TextStyle(color: Colors.white70, fontSize: 13)),
           const SizedBox(height: 4),
-          Text('EGP ${NumberFormat('#,##0.00').format(totalBalance)}',
-              style: const TextStyle(color: Colors.white, fontSize: 28,
-                  fontWeight: FontWeight.w700, letterSpacing: -0.5)),
+          Text(
+            'EGP ${NumberFormat('#,##0.00').format(totalBalance)}',
+            style: const TextStyle(
+                color: Colors.white,
+                fontSize: 28,
+                fontWeight: FontWeight.w700,
+                letterSpacing: -0.5),
+          ),
           const SizedBox(height: 16),
           Row(children: [
-            Expanded(child: _InfoChip(
-                label: 'Total Expenses',
-                value: 'EGP ${NumberFormat('#,##0').format(totalExpenses)}')),
+            Expanded(
+                child: _InfoChip(
+                    label: 'Total Expenses',
+                    value:
+                    'EGP ${NumberFormat('#,##0').format(totalExpenses)}')),
             const SizedBox(width: 12),
-            Expanded(child: _InfoChip(
-                label: 'Remaining Budget',
-                value: 'EGP ${NumberFormat('#,##0').format(remaining)}')),
+            Expanded(
+                child: _InfoChip(
+                    label: 'Remaining Budget',
+                    value:
+                    'EGP ${NumberFormat('#,##0').format(remaining)}')),
           ]),
           const SizedBox(height: 16),
           Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
@@ -223,8 +259,10 @@ class _BalanceCard extends StatelessWidget {
                 style: TextStyle(
                     color: Colors.white.withOpacity(0.85), fontSize: 12)),
             Text('${usedPercent.toStringAsFixed(0)}%',
-                style: const TextStyle(color: Colors.white,
-                    fontSize: 12, fontWeight: FontWeight.w600)),
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600)),
           ]),
           const SizedBox(height: 6),
           ClipRRect(
@@ -233,9 +271,12 @@ class _BalanceCard extends StatelessWidget {
               value: usedPercent / 100,
               backgroundColor: Colors.white.withOpacity(0.25),
               valueColor: AlwaysStoppedAnimation<Color>(
-                  usedPercent >= 100
-                      ? AppColors.error
-                      : usedPercent >= 80 ? AppColors.warning : Colors.white),
+                usedPercent >= 100
+                    ? AppColors.error
+                    : usedPercent >= 80
+                    ? AppColors.warning
+                    : Colors.white,
+              ),
               minHeight: 6,
             ),
           ),
@@ -258,8 +299,8 @@ class _InfoChip extends StatelessWidget {
           borderRadius: BorderRadius.circular(10)),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text(label,
-            style: TextStyle(
-                color: Colors.white.withOpacity(0.8), fontSize: 11)),
+            style:
+            TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 11)),
         const SizedBox(height: 2),
         Text(value,
             style: const TextStyle(
@@ -294,13 +335,18 @@ class _MonthlySummaryCard extends StatelessWidget {
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.05),
-              blurRadius: 12, offset: const Offset(0, 4))
+          BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 12,
+              offset: const Offset(0, 4))
         ],
       ),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      child:
+      Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         const Text('Monthly Summary',
-            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600,
+            style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
                 color: AppColors.textPrimary)),
         const SizedBox(height: 16),
         Row(children: [
@@ -310,15 +356,20 @@ class _MonthlySummaryCard extends StatelessWidget {
         ]),
         const SizedBox(height: 16),
         if (barData.isEmpty)
-          const SizedBox(height: 80,
-              child: Center(child: Text('No data yet',
-                  style: TextStyle(color: AppColors.textHint))))
+          const SizedBox(
+              height: 80,
+              child: Center(
+                  child: Text('No data yet',
+                      style: TextStyle(color: AppColors.textHint))))
         else
           SizedBox(
             height: 160,
             child: BarChart(BarChartData(
-              maxY: maxVal * 1.25, minY: 0,
-              gridData: FlGridData(show: true, drawVerticalLine: false,
+              maxY: maxVal * 1.25,
+              minY: 0,
+              gridData: FlGridData(
+                  show: true,
+                  drawVerticalLine: false,
                   getDrawingHorizontalLine: (v) =>
                       FlLine(color: AppColors.divider, strokeWidth: 0.8)),
               borderData: FlBorderData(show: false),
@@ -348,21 +399,28 @@ class _MonthlySummaryCard extends StatelessWidget {
                   ),
                 ),
               ),
-              barGroups: List.generate(months.length, (i) {
-                return BarChartGroupData(x: i, barRods: [
-                  BarChartRodData(toY: expenses[i], color: AppColors.primary,
-                      width: 10, borderRadius: BorderRadius.circular(4)),
-                  BarChartRodData(toY: balances[i],
-                      color: const Color(0xFFB2DFDB),
-                      width: 10, borderRadius: BorderRadius.circular(4)),
-                ], barsSpace: 4);
-              }),
+              barGroups: List.generate(
+                  months.length,
+                      (i) => BarChartGroupData(x: i, barRods: [
+                    BarChartRodData(
+                        toY: expenses[i],
+                        color: AppColors.primary,
+                        width: 10,
+                        borderRadius: BorderRadius.circular(4)),
+                    BarChartRodData(
+                        toY: balances[i],
+                        color: const Color(0xFFB2DFDB),
+                        width: 10,
+                        borderRadius: BorderRadius.circular(4)),
+                  ], barsSpace: 4)),
               barTouchData: BarTouchData(
                 touchTooltipData: BarTouchTooltipData(
                   getTooltipColor: (_) => AppColors.primaryDark,
                   getTooltipItem: (group, gi, rod, ri) => BarTooltipItem(
                     '${ri == 0 ? 'Expenses' : 'Balance'}\nEGP ${rod.toY.toStringAsFixed(0)}',
-                    const TextStyle(color: Colors.white, fontSize: 11,
+                    const TextStyle(
+                        color: Colors.white,
+                        fontSize: 11,
                         fontWeight: FontWeight.w600),
                   ),
                 ),
@@ -380,28 +438,30 @@ class _Dot extends StatelessWidget {
   const _Dot({required this.color, required this.label});
 
   @override
-  Widget build(BuildContext context) {
-    return Row(children: [
-      Container(width: 10, height: 10,
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
-      const SizedBox(width: 4),
-      Text(label,
-          style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
-    ]);
-  }
+  Widget build(BuildContext context) => Row(children: [
+    Container(
+        width: 10,
+        height: 10,
+        decoration:
+        BoxDecoration(color: color, shape: BoxShape.circle)),
+    const SizedBox(width: 4),
+    Text(label,
+        style: const TextStyle(
+            fontSize: 11, color: AppColors.textSecondary)),
+  ]);
 }
 
 class _TopCategoriesRow extends StatelessWidget {
   final Map<String, double> categories;
   final double total;
-  const _TopCategoriesRow({required this.categories, required this.total});
+  const _TopCategoriesRow(
+      {required this.categories, required this.total});
 
   @override
   Widget build(BuildContext context) {
     final sorted = categories.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
     final top = sorted.take(3).toList();
-
     return Row(
       children: top.map((e) {
         final pct = total > 0 ? (e.value / total * 100) : 0;
@@ -412,19 +472,25 @@ class _TopCategoriesRow extends StatelessWidget {
             decoration: BoxDecoration(
               color: AppColors.surface,
               borderRadius: BorderRadius.circular(14),
-              boxShadow: [BoxShadow(
-                  color: Colors.black.withOpacity(0.04), blurRadius: 8)],
+              boxShadow: [
+                BoxShadow(
+                    color: Colors.black.withOpacity(0.04), blurRadius: 8)
+              ],
             ),
             child: Column(children: [
               CategoryIcon(category: e.key, size: 40),
               const SizedBox(height: 8),
               Text(e.key,
-                  style: const TextStyle(fontSize: 11,
-                      fontWeight: FontWeight.w500, color: AppColors.textPrimary),
+                  style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.textPrimary),
                   overflow: TextOverflow.ellipsis),
               Text('${pct.toStringAsFixed(0)}%',
-                  style: const TextStyle(fontSize: 12,
-                      fontWeight: FontWeight.w600, color: AppColors.primary)),
+                  style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.primary)),
             ]),
           ),
         );
@@ -436,12 +502,13 @@ class _TopCategoriesRow extends StatelessWidget {
 class _TransactionTile extends StatelessWidget {
   final dynamic transaction;
   final VoidCallback onTap;
-  const _TransactionTile({required this.transaction, required this.onTap});
+  const _TransactionTile(
+      {required this.transaction, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
     final name = transaction['expenseName']?.toString() ?? '';
-    final cat  = transaction['categoryName']?.toString() ?? '';
+    final cat = transaction['categoryName']?.toString() ?? '';
     final amount = (transaction['amount'] as num?)?.toDouble() ?? 0;
     String dateStr = '';
     try {
@@ -453,32 +520,43 @@ class _TransactionTile extends StatelessWidget {
       onTap: onTap,
       child: Container(
         margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        padding:
+        const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
           color: AppColors.surface,
           borderRadius: BorderRadius.circular(14),
-          boxShadow: [BoxShadow(
-              color: Colors.black.withOpacity(0.04), blurRadius: 8)],
+          boxShadow: [
+            BoxShadow(
+                color: Colors.black.withOpacity(0.04), blurRadius: 8)
+          ],
         ),
         child: Row(children: [
           CategoryIcon(category: cat, size: 42),
           const SizedBox(width: 12),
-          Expanded(child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(name, style: const TextStyle(fontSize: 14,
-                  fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
-              const SizedBox(height: 2),
-              Text(cat, style: const TextStyle(
-                  fontSize: 12, color: AppColors.textSecondary)),
-            ],
-          )),
+          Expanded(
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(name,
+                        style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textPrimary)),
+                    const SizedBox(height: 2),
+                    Text(cat,
+                        style: const TextStyle(
+                            fontSize: 12,
+                            color: AppColors.textSecondary)),
+                  ])),
           Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
             Text('EGP ${NumberFormat('#,##0.00').format(amount)}',
-                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700,
+                style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
                     color: AppColors.textPrimary)),
-            Text(dateStr, style: const TextStyle(
-                fontSize: 11, color: AppColors.textSecondary)),
+            Text(dateStr,
+                style: const TextStyle(
+                    fontSize: 11, color: AppColors.textSecondary)),
           ]),
         ]),
       ),
@@ -492,21 +570,9 @@ class _ErrorWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Center(
-      child: Padding(padding: const EdgeInsets.all(20),
-          child: Text(msg, style: const TextStyle(color: AppColors.error))));
-}
-
-class _EmptyWidget extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) => const Center(
     child: Padding(
-      padding: EdgeInsets.all(32),
-      child: Column(children: [
-        Icon(Icons.receipt_long_outlined, size: 60, color: AppColors.textHint),
-        SizedBox(height: 12),
-        Text('No transactions yet',
-            style: TextStyle(color: AppColors.textSecondary, fontSize: 14)),
-      ]),
-    ),
+        padding: const EdgeInsets.all(20),
+        child: Text(msg,
+            style: const TextStyle(color: AppColors.error))),
   );
 }

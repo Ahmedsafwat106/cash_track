@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:local_auth/local_auth.dart';
+import 'package:onesignal_flutter/onesignal_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../core/api_service.dart';
 import '../utils/app_colors.dart';
-
 import 'MainLayout.dart';
 import 'login_screen.dart';
 
@@ -17,19 +18,21 @@ class _SplashScreenState extends State<SplashScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _ctrl;
   late Animation<double> _fadeAnim;
-  late Animation<double> _scaleAnim;
 
   @override
   void initState() {
     super.initState();
     _ctrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 1200));
-    _fadeAnim = Tween<double>(begin: 0, end: 1).animate(
-        CurvedAnimation(parent: _ctrl, curve: Curves.easeIn));
-    _scaleAnim = Tween<double>(begin: 0.7, end: 1).animate(
-        CurvedAnimation(parent: _ctrl, curve: Curves.elasticOut));
+        vsync: this, duration: const Duration(milliseconds: 800));
+    _fadeAnim = CurvedAnimation(parent: _ctrl, curve: Curves.easeIn);
     _ctrl.forward();
     _navigate();
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
   }
 
   Future<void> _navigate() async {
@@ -40,99 +43,127 @@ class _SplashScreenState extends State<SplashScreen>
     final token = prefs.getString('token');
     final biometricEnabled = prefs.getBool('biometric_enabled') ?? false;
 
-    if (token != null) {
-      if (biometricEnabled) {
-        // جرب البصمة
-        final auth = LocalAuthentication();
-        try {
-          final isAvailable = await auth.canCheckBiometrics;
-          if (isAvailable) {
-            final authenticated = await auth.authenticate(
-              localizedReason: 'Use biometric to login to CashTrackApp',
-              options: const AuthenticationOptions(
-                biometricOnly: true,
-                stickyAuth: true,
-              ),
-            );
-            if (authenticated && mounted) {
-              Navigator.pushReplacement(context,
-                  MaterialPageRoute(builder: (_) => MainLayout(token: token)));
-              return;
-            }
-          }
-        } catch (_) {}
-
-      } else {
-
-        Navigator.pushReplacement(context,
-            MaterialPageRoute(builder: (_) => MainLayout(token: token)));
-        return;
-      }
+    if (token == null || token.isEmpty) {
+      _goLogin();
+      return;
     }
 
-    Navigator.pushReplacement(context,
-        MaterialPageRoute(builder: (_) => const LoginScreen()));
+    try {
+      final playerId = await OneSignal.User.getOnesignalId();
+      if (playerId != null) {
+        await ApiService().saveDeviceId(token, deviceId: playerId);
+      }
+    } catch (_) {}
+
+    if (biometricEnabled) {
+      final auth = LocalAuthentication();
+      try {
+        final isAvailable = await auth.canCheckBiometrics;
+        final isSupported = await auth.isDeviceSupported();
+
+        if (isAvailable && isSupported) {
+          final authenticated = await auth.authenticate(
+            localizedReason: 'Use biometric to login',
+            options: const AuthenticationOptions(
+              biometricOnly: false,
+              stickyAuth: true,
+            ),
+          );
+
+          if (authenticated && mounted) {
+
+            _goMain(token);
+            return;
+          }
+        }
+      } catch (e) {
+        print('Biometric error: $e');
+      }
+      _goLogin();
+    } else {
+      _goMain(token);
+    }
   }
 
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
+  void _goMain(String token) {
+    if (!mounted) return;
+    Navigator.pushReplacement(
+      context,
+      PageRouteBuilder(
+        pageBuilder: (_, __, ___) => MainLayout(token: token),
+        transitionDuration: const Duration(milliseconds: 300),
+        transitionsBuilder: (_, anim, __, child) =>
+            FadeTransition(opacity: anim, child: child),
+      ),
+    );
+  }
+
+  void _goLogin() {
+    if (!mounted) return;
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (_) => const LoginScreen()),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.primary,
-      body: Center(
-        child: FadeTransition(
-          opacity: _fadeAnim,
-          child: ScaleTransition(
-            scale: _scaleAnim,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 90,
-                  height: 90,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(24),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.15),
-                        blurRadius: 20,
-                        offset: const Offset(0, 8),
-                      )
-                    ],
-                  ),
-                  child: const Icon(
-                    Icons.account_balance_wallet_rounded,
-                    size: 50,
-                    color: AppColors.primary,
-                  ),
+      backgroundColor: AppColors.background,
+      body: FadeTransition(
+        opacity: _fadeAnim,
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 90,
+                height: 90,
+                decoration: BoxDecoration(
+                  color: AppColors.primary,
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.primary.withOpacity(0.4),
+                      blurRadius: 20,
+                      offset: const Offset(0, 8),
+                    )
+                  ],
                 ),
-                const SizedBox(height: 20),
-                const Text(
-                  'CashTrack',
-                  style: TextStyle(
-                    fontSize: 32,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white,
-                    letterSpacing: 1,
-                  ),
+                child: const Icon(
+                  Icons.account_balance_wallet_rounded,
+                  color: Colors.white,
+                  size: 50,
                 ),
-                const SizedBox(height: 8),
-                const Text(
-                  'Smart Money Management',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.white70,
-                    fontWeight: FontWeight.w400,
-                  ),
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                'CashTrack',
+                style: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary,
+                  letterSpacing: -0.5,
                 ),
-              ],
-            ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Smart Budget Manager',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+              const SizedBox(height: 60),
+              const SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(
+                  color: AppColors.primary,
+                  strokeWidth: 2.5,
+                ),
+              ),
+            ],
           ),
         ),
       ),

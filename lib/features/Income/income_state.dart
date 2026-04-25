@@ -1,4 +1,3 @@
-// income_state.dart
 abstract class IncomeState {}
 class IncomeInitial extends IncomeState {}
 class IncomeLoading extends IncomeState {}

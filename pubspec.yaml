@@ -16,9 +16,8 @@ dependencies:
   fl_chart: ^0.68.0
   image_picker: ^1.1.2
   cached_network_image: ^3.3.1
+  onesignal_flutter: ^5.0.0
 
-
-  # ✅ ضيف دول
   provider: ^6.1.2
   google_sign_in: ^6.2.1
   local_auth: ^2.2.0

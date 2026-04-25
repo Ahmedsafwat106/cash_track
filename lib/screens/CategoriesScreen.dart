@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../core/api_service.dart';
@@ -9,7 +8,6 @@ import '../widgets/CategoryIcon.dart';
 import '../widgets/custom_button.dart';
 import '../widgets/custom_textfield.dart';
 import '../widgets/loading_indicator.dart';
-
 
 class CategoriesScreen extends StatefulWidget {
   final String token;
@@ -32,10 +30,8 @@ class _CategoriesScreenState extends State<CategoriesScreen>
     _cubit.loadCategories(widget.token, isExpense: true);
     _tabCtrl.addListener(() {
       if (!_tabCtrl.indexIsChanging) {
-        _cubit.loadCategories(
-          widget.token,
-          isExpense: _tabCtrl.index == 0,
-        );
+        _cubit.loadCategories(widget.token,
+            isExpense: _tabCtrl.index == 0);
       }
     });
   }
@@ -54,7 +50,7 @@ class _CategoriesScreenState extends State<CategoriesScreen>
       child: Scaffold(
         backgroundColor: AppColors.background,
         appBar: AppBar(
-          title: const Text('Cash Track'),
+          title: const Text('Categories'),
           leading: IconButton(
             icon: const Icon(Icons.arrow_back_ios),
             onPressed: () => Navigator.pop(context),
@@ -74,8 +70,8 @@ class _CategoriesScreenState extends State<CategoriesScreen>
           onPressed: () => _showAddSheet(context),
           backgroundColor: AppColors.primary,
           icon: const Icon(Icons.add, color: Colors.white),
-          label: const Text('Add Now',
-              style: TextStyle(color: Colors.white)),
+          label:
+          const Text('Add Now', style: TextStyle(color: Colors.white)),
         ),
         body: BlocConsumer<CategoriesCubit, CategoriesState>(
           listener: (ctx, state) {
@@ -100,12 +96,13 @@ class _CategoriesScreenState extends State<CategoriesScreen>
             if (state is CategoriesLoading) {
               return const LoadingIndicator();
             }
-
             return TabBarView(
               controller: _tabCtrl,
               children: [
-                _CategoriesList(categories: _cubit.expenseCategories, totalBudget: 25000),
-                _CategoriesList(categories: _cubit.incomeCategories, totalBudget: 25000),
+                _CategoriesList(
+                    categories: _cubit.expenseCategories),
+                _CategoriesList(
+                    categories: _cubit.incomeCategories),
               ],
             );
           },
@@ -137,9 +134,7 @@ class _CategoriesScreenState extends State<CategoriesScreen>
 
 class _CategoriesList extends StatelessWidget {
   final List<dynamic> categories;
-  final double totalBudget;
-  const _CategoriesList(
-      {required this.categories, required this.totalBudget});
+  const _CategoriesList({required this.categories});
 
   @override
   Widget build(BuildContext context) {
@@ -162,9 +157,6 @@ class _CategoriesList extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
       children: [
-        // Overall budget
-        _OverallBudget(total: totalBudget, used: totalBudget * 0.8),
-        const SizedBox(height: 20),
         const Text('Category Budgets',
             style: TextStyle(
                 fontSize: 15,
@@ -173,9 +165,8 @@ class _CategoriesList extends StatelessWidget {
         const SizedBox(height: 12),
         ...categories.map((c) {
           final name = c['name']?.toString() ?? '';
-          final budget = (c['budget'] as num?)?.toDouble() ?? 5000;
-          final spent =
-              (c['spent'] as num?)?.toDouble() ?? 0;
+          final budget = (c['budget'] as num?)?.toDouble() ?? 0;
+          final spent = (c['spent'] as num?)?.toDouble() ?? 0;
           return _CategoryBudgetCard(
               name: name, spent: spent, budget: budget);
         }),
@@ -184,68 +175,13 @@ class _CategoriesList extends StatelessWidget {
   }
 }
 
-class _OverallBudget extends StatelessWidget {
-  final double total;
-  final double used;
-  const _OverallBudget({required this.total, required this.used});
-
-  @override
-  Widget build(BuildContext context) {
-    final pct = total > 0 ? (used / total) : 0.0;
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-              color: Colors.black.withOpacity(0.05), blurRadius: 8)
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('Overall Monthly Budget',
-              style: TextStyle(
-                  fontSize: 13, color: AppColors.textSecondary)),
-          const SizedBox(height: 6),
-          Row(
-            children: [
-              Text(
-                  'EGP ${(used).toStringAsFixed(0)}',
-                  style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.textPrimary)),
-              Text('  /  EGP ${total.toStringAsFixed(0)}',
-                  style: const TextStyle(
-                      fontSize: 14,
-                      color: AppColors.textSecondary)),
-            ],
-          ),
-          const SizedBox(height: 10),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(6),
-            child: LinearProgressIndicator(
-              value: pct.clamp(0, 1),
-              backgroundColor: AppColors.primaryLight,
-              valueColor: const AlwaysStoppedAnimation<Color>(
-                  AppColors.primary),
-              minHeight: 10,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _CategoryBudgetCard extends StatelessWidget {
   final String name;
-  final double spent;
-  final double budget;
+  final double spent, budget;
   const _CategoryBudgetCard(
-      {required this.name, required this.spent, required this.budget});
+      {required this.name,
+        required this.spent,
+        required this.budget});
 
   @override
   Widget build(BuildContext context) {
@@ -253,8 +189,13 @@ class _CategoryBudgetCard extends StatelessWidget {
     budget > 0 ? (spent / budget * 100).clamp(0, 100) : 0.0;
     Color color = AppColors.primary;
     String label = '${pct.toStringAsFixed(0)}%';
-    if (pct >= 100) { color = AppColors.error; label = 'Exceeded!'; }
-    else if (pct >= 90) { color = AppColors.warning; label = '90% - Warning!'; }
+    if (pct >= 100) {
+      color = AppColors.error;
+      label = 'Exceeded!';
+    } else if (pct >= 90) {
+      color = AppColors.warning;
+      label = '90% - Warning!';
+    }
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -274,11 +215,23 @@ class _CategoryBudgetCard extends StatelessWidget {
               CategoryIcon(category: name, size: 36),
               const SizedBox(width: 10),
               Expanded(
-                child: Text(name,
-                    style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textPrimary)),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(name,
+                        style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textPrimary)),
+                    if (budget > 0)
+                      Text(
+                        'Budget: EGP ${budget.toStringAsFixed(0)}',
+                        style: const TextStyle(
+                            fontSize: 11,
+                            color: AppColors.textSecondary),
+                      ),
+                  ],
+                ),
               ),
               Text(label,
                   style: TextStyle(
@@ -310,8 +263,7 @@ class _AddCategorySheet extends StatefulWidget {
       {required this.onAdd, required this.isExpense});
 
   @override
-  State<_AddCategorySheet> createState() =>
-      _AddCategorySheetState();
+  State<_AddCategorySheet> createState() => _AddCategorySheetState();
 }
 
 class _AddCategorySheetState extends State<_AddCategorySheet> {
@@ -371,9 +323,7 @@ class _AddCategorySheetState extends State<_AddCategorySheet> {
               const TextInputType.numberWithOptions(decimal: true),
               validator: (v) {
                 if (v!.isEmpty) return 'Enter a budget';
-                if (double.tryParse(v) == null) {
-                  return 'Invalid number';
-                }
+                if (double.tryParse(v) == null) return 'Invalid number';
                 return null;
               },
             ),
